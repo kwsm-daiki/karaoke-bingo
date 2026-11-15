@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>歌詞ビンゴ</title>
+<meta name="description" content="カラオケで、歌詞に出てきた言葉をタップして遊ぶ 5×5 のビンゴ">
+<meta name="theme-color" content="#130e26">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="歌詞ビンゴ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" media="print" onload="this.media='all'">
+<style>
+/* レイアウト: 1画面のゲーム。見出し → 状態 → 正方形のカード → 操作。ネオンのカラオケボックス */
+:root {
+  --bg: #130e26;
+  --bg-glow: #3a1d6e;
+  --surface: #1e1740;
+  --surface-on: #3a1840;
+  --line: #3d3278;
+  --fg: #f4f0ff;
+  --muted: #b3aad8;
+  --pink: #ff4fa3;
+  --cyan: #3ee6ff;
+  --yellow: #ffd84a;
+  --on-accent: #130e26;
+  --display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg) radial-gradient(120% 50% at 50% -8%, var(--bg-glow) 0%, transparent 60%) no-repeat;
+  color: var(--fg);
+  font-family: var(--body);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+.app {
+  max-width: 520px; margin: 0 auto; min-height: 100%;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 12px;
+}
+header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 {
+  margin: 0; font: 800 1.6rem var(--display); letter-spacing: .04em; color: #fff; white-space: nowrap;
+  text-shadow: 0 0 6px var(--pink), 0 0 18px var(--pink);
+}
+h1 span { color: var(--cyan); text-shadow: 0 0 6px var(--cyan), 0 0 18px var(--cyan); }
+.tabs { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.tabs button {
+  min-height: 44px; min-width: 64px; border: 0; background: transparent; color: var(--muted);
+  font: 700 .9rem var(--body); padding: 0 14px; border-radius: 999px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--line); color: #fff; }
+
+/* あそぶ画面は1画面に収める */
+#view-play { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.status { display: flex; gap: 8px; }
+.pill {
+  flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 6px 4px; text-align: center; min-width: 0;
+}
+.pill b { display: block; font: 800 1.55rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.pill small { color: var(--muted); font-size: .72rem; }
+.pill.reach.hot b { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
+.pill.bingo.hot b { color: var(--pink); text-shadow: 0 0 10px var(--pink); }
+
+.board-wrap { position: relative; width: min(100%, calc(100dvh - 290px)); min-width: min(100%, 300px); margin: 0 auto; }
+.board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; aspect-ratio: 1; width: 100%; }
+.cell {
+  position: relative; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg);
+  border-radius: 10px; padding: 2px; cursor: pointer; user-select: none; -webkit-user-select: none;
+  display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
+  font: 700 max(12px, min(4.1vw, 1.1rem))/1.15 var(--body);
+  transition: transform .08s, background .15s, border-color .15s;
+}
+.cell .w { position: relative; z-index: 1; overflow-wrap: anywhere; }
+.cell.long { font-size: max(12px, min(3.3vw, .92rem)); }
+.cell:active { transform: scale(.92); }
+.cell:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+/* 印: 文字の後ろに敷く丸 */
+.cell::before {
+  content: ""; position: absolute; inset: 9%; border-radius: 50%;
+  border: 2.5px solid var(--pink); background: rgba(255, 79, 163, .16);
+  transform: scale(0) rotate(-20deg); opacity: 0;
+  transition: transform .18s cubic-bezier(.3, 1.6, .6, 1), opacity .12s;
+}
+.cell.on { border-color: var(--pink); background: var(--surface-on); box-shadow: 0 0 10px rgba(255, 79, 163, .5); }
+.cell.on::before { transform: scale(1) rotate(-8deg); opacity: 1; }
+/* そろった列: 水色の二重丸 */
+.cell.line { border-color: var(--cyan); box-shadow: 0 0 12px rgba(62, 230, 255, .65), inset 0 0 10px rgba(62, 230, 255, .3); }
+.cell.line::before { border-color: var(--cyan); background: rgba(62, 230, 255, .14); box-shadow: 0 0 0 3px var(--surface-on), 0 0 0 5.5px var(--cyan); inset: 14%; }
+/* あと1マス: 黄色の点線 */
+.cell.target { border: 2px dashed var(--yellow); }
+.cell.free { color: var(--cyan); font-family: var(--display); font-weight: 800; text-shadow: 0 0 8px var(--cyan); cursor: default; }
+.cell.free:active { transform: none; }
+
+.reach-toast {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); z-index: 5;
+  background: var(--yellow); color: var(--on-accent); font: 800 2rem var(--display);
+  padding: 10px 26px; border-radius: 16px; opacity: 0; pointer-events: none; white-space: nowrap;
+  box-shadow: 0 0 24px rgba(255, 216, 74, .7);
+  transition: opacity .15s, transform .22s cubic-bezier(.3, 1.6, .6, 1);
+}
+.reach-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.btn {
+  min-height: 48px; border-radius: 14px; padding: 10px 12px; cursor: pointer;
+  font: 700 1rem var(--body); color: var(--fg); background: var(--surface); border: 1.5px solid var(--line);
+}
+.btn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.btn.pink { background: var(--pink); border-color: var(--pink); color: var(--on-accent); box-shadow: 0 0 16px rgba(255, 79, 163, .55); }
+.btn.armed { background: var(--yellow); border-color: var(--yellow); color: var(--on-accent); }
+.btn:disabled { opacity: .45; }
+.hint { color: var(--muted); font-size: .8rem; line-height: 1.6; margin: 0; }
+.hint b { color: var(--fg); }
+
+/* ビンゴのオーバーレイ */
+.overlay {
+  position: fixed; inset: 0; z-index: 20; background: rgba(10, 6, 24, .78);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  padding: 24px max(24px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+  animation: fade .2s;
+}
+.overlay .inner { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.big { font: 800 clamp(3rem, 16vw, 4.2rem) var(--display); color: #fff; text-shadow: 0 0 8px var(--pink), 0 0 24px var(--pink), 0 0 48px var(--pink); animation: pop .35s cubic-bezier(.3, 1.6, .6, 1); }
+.sub { color: var(--cyan); font-weight: 700; font-size: 1.05rem; margin-bottom: 18px; }
+.overlay .btn { width: 100%; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { transform: scale(.5); opacity: 0; } }
+
+/* ことば画面 */
+#view-words { display: flex; flex-direction: column; gap: 10px; }
+textarea {
+  width: 100%; min-height: 46dvh; border: 1.5px solid var(--line); border-radius: 14px; resize: vertical;
+  background: var(--surface); color: var(--fg); font: 1rem/1.8 var(--body); padding: 10px 12px;
+}
+textarea:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+.count { font-size: .85rem; color: var(--cyan); font-variant-numeric: tabular-nums; }
+.count.bad { color: var(--yellow); font-weight: 700; }
+.row { display: flex; gap: 8px; }
+.row .btn { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>歌詞<span>ビンゴ</span></h1>
+    <div class="tabs" role="tablist">
+      <button id="tab-play" role="tab" aria-selected="true" aria-controls="view-play">あそぶ</button>
+      <button id="tab-words" role="tab" aria-selected="false" aria-controls="view-words">ことば</button>
+    </div>
+  </header>
+
+  <section id="view-play" role="tabpanel">
+    <div class="status">
+      <div class="pill bingo" id="pill-bingo"><b id="n-bingo">0</b><small>ビンゴ</small></div>
+      <div class="pill reach" id="pill-reach"><b id="n-reach">0</b><small>リーチ</small></div>
+      <div class="pill"><b id="n-marked">1</b><small>/25 FREE込み</small></div>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="board" aria-label="ビンゴカード"></div>
+      <div class="reach-toast" id="reach-toast" aria-hidden="true">リーチ!</div>
+    </div>
+    <button class="btn" id="btn-new">新しいカード</button>
+    <p class="hint">歌詞にマスの言葉が出たらタップ。もう一度タップで取り消し。</p>
+    <p class="hint" id="install-hint"><b>アプリにする:</b> Android は右上の「︙」→「ホーム画面に追加」、iPhone は共有ボタン →「ホーム画面に追加」</p>
+  </section>
+
+  <section id="view-words" role="tabpanel" hidden>
+    <p class="hint">カードに使う言葉を1行に1つ。24個以上の中から、ランダムにカードを作ります。</p>
+    <textarea id="words" spellcheck="false" aria-label="カードに使う言葉"></textarea>
+    <div class="count" id="word-count" aria-live="polite"></div>
+    <div class="row">
+      <button class="btn" id="btn-reset-words">最初に戻す</button>
+      <button class="btn pink" id="btn-save-words">保存して作り直す</button>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="ov-title" hidden>
+  <div class="inner">
+    <div class="big" id="ov-title">BINGO!</div>
+    <div class="sub" id="ov-sub">1列そろいました</div>
+    <button class="btn pink" id="ov-continue">このまま続ける</button>
+    <button class="btn" id="ov-new">新しいカード</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const DEFAULT_WORDS = ["君","僕","愛","夢","空","涙","笑顔","未来","明日","星","光","風","心","世界","約束","奇跡","永遠","季節","桜","夜","月","雨","海","花","声","名前","記憶","思い出","さよなら","ありがとう","好き","一緒","運命","自由","希望","勇気","翼","扉","道","旅","景色","瞳","胸","痛み","嘘","青春","恋","秘密","幸せ","最後","今日","昨日","夏","冬","太陽","虹","神様","魔法","宇宙","鼓動","信じる","守る","輝く","叶う","届く","走る","抱きしめる","泣く","忘れない","ふたり","友","俺","Baby","Oh","Yeah","ラララ"].join("\n");
+const KEY = "lyric-bingo-v2";
+const FREE = 12;
+const LINES = (() => {
+  const L = [];
+  for (let r = 0; r < 5; r++) L.push([0, 1, 2, 3, 4].map(c => r * 5 + c));
+  for (let c = 0; c < 5; c++) L.push([0, 1, 2, 3, 4].map(r => r * 5 + c));
+  L.push([0, 6, 12, 18, 24], [4, 8, 12, 16, 20]);
+  return L;
+})();
+
+// ---- 状態 ----
+function parseWords(text) {
+  const seen = new Set();
+  return String(text).split(/\r?\n/).map(s => s.trim()).filter(s => s && !seen.has(s) && seen.add(s));
+}
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function makeCard(words) {
+  const pick = shuffle(parseWords(words)).slice(0, 24);
+  pick.splice(FREE, 0, "FREE");
+  return { card: pick, marks: pick.map((_, i) => i === FREE), ackBingo: 0 };
+}
+function isValid(s) {
+  return s && typeof s.words === "string" && parseWords(s.words).length >= 24 &&
+    Array.isArray(s.card) && s.card.length === 25 && s.card.every(w => typeof w === "string") &&
+    Array.isArray(s.marks) && s.marks.length === 25 && s.marks[FREE] === true &&
+    Number.isInteger(s.ackBingo) && s.ackBingo >= 0;
+}
+function loadState() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
+  if (isValid(s)) return s;
+  const words = s && typeof s.words === "string" && parseWords(s.words).length >= 24 ? s.words : DEFAULT_WORDS;
+  return Object.assign({ words }, makeCard(words));
+}
+function saveState() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+function evaluate(marks) {
+  const done = LINES.filter(l => l.every(i => marks[i]));
+  const reachLines = LINES.filter(l => l.filter(i => marks[i]).length === 4);
+  const targets = new Set(reachLines.map(l => l.find(i => !marks[i])));
+  return { bingo: done.length, reach: reachLines.length, onLine: new Set(done.flat()), targets };
+}
+
+let state = loadState();
+// 閉じる前にオーバーレイが出ていた等で ackBingo がずれていたら、そろえる
+state.ackBingo = evaluate(state.marks).bingo;
+saveState();
+
+// ---- 表示 ----
+const $ = id => document.getElementById(id);
+const board = $("board");
+const cells = [];
+for (let i = 0; i < 25; i++) {
+  const b = document.createElement("button");
+  b.className = "cell";
+  b.id = "cell-" + i;
+  const s = document.createElement("span");
+  s.className = "w";
+  b.appendChild(s);
+  b.addEventListener("click", () => toggle(i));
+  board.appendChild(b);
+  cells.push(b);
+}
+
+function render() {
+  const ev = evaluate(state.marks);
+  cells.forEach((b, i) => {
+    const w = state.card[i];
+    b.firstChild.textContent = w;
+    b.classList.toggle("on", state.marks[i]);
+    b.classList.toggle("line", ev.onLine.has(i));
+    b.classList.toggle("target", ev.targets.has(i));
+    b.classList.toggle("free", i === FREE);
+    b.classList.toggle("long", [...w].length >= 4);
+    b.setAttribute("aria-pressed", String(state.marks[i]));
+    b.setAttribute("aria-label", w + (state.marks[i] ? "、印あり" : "") + (ev.targets.has(i) ? "、あと1マス" : ""));
+    b.disabled = i === FREE;
+  });
+  $("n-bingo").textContent = ev.bingo;
+  $("n-reach").textContent = ev.reach;
+  $("n-marked").textContent = state.marks.filter(Boolean).length;
+  $("pill-bingo").classList.toggle("hot", ev.bingo > 0);
+  $("pill-reach").classList.toggle("hot", ev.reach > 0);
+  return ev;
+}
+
+function buzz(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
+
+let reachTimer;
+function showReach() {
+  const t = $("reach-toast");
+  t.classList.add("show");
+  clearTimeout(reachTimer);
+  reachTimer = setTimeout(() => t.classList.remove("show"), 1000);
+}
+
+function toggle(i) {
+  if (i === FREE || !$("overlay").hidden) return;
+  const before = evaluate(state.marks);
+  state.marks[i] = !state.marks[i];
+  const after = render();
+  if (!state.marks[i]) state.ackBingo = Math.min(state.ackBingo, after.bingo);
+  if (after.bingo > state.ackBingo) {
+    showOverlay(after.bingo);
+  } else if (state.marks[i] && after.reach > before.reach && after.bingo === before.bingo) {
+    showReach();
+    buzz(60);
+  } else {
+    buzz(state.marks[i] ? 15 : [30, 40, 30]);
+  }
+  saveState();
+}
+
+// ---- 2回押しのボタン ----
+function twoStep(btn, armedLabel, action, needConfirm = () => true) {
+  const label = btn.textContent;
+  let timer = null;
+  const disarm = () => { clearTimeout(timer); timer = null; btn.classList.remove("armed"); btn.textContent = label; };
+  btn.addEventListener("click", () => {
+    if (timer || !needConfirm()) { disarm(); action(); return; }
+    btn.classList.add("armed");
+    btn.textContent = armedLabel;
+    timer = setTimeout(disarm, 3000);
+  });
+  return disarm;
+}
+
+function newCard() {
+  Object.assign(state, makeCard(state.words));
+  saveState();
+  render();
+}
+const hasMarks = () => state.marks.some((m, i) => m && i !== FREE);
+twoStep($("btn-new"), "もう一度押すと作り直します", newCard, hasMarks);
+
+// ---- オーバーレイ ----
+let unlockTimer;
+const ovButtons = [$("ov-continue"), $("ov-new")];
+function showOverlay(n) {
+  $("ov-title").textContent = n > 1 ? n + " BINGO!" : "BINGO!";
+  $("ov-sub").textContent = n + "列そろいました";
+  $("overlay").hidden = false;
+  ovButtons.forEach(b => b.disabled = true);
+  clearTimeout(unlockTimer);
+  unlockTimer = setTimeout(() => { ovButtons.forEach(b => b.disabled = false); $("ov-continue").focus(); }, 800);
+  buzz([80, 60, 160]);
+}
+function hideOverlay() { $("overlay").hidden = true; disarmOvNew(); }
+$("ov-continue").addEventListener("click", () => {
+  state.ackBingo = evaluate(state.marks).bingo;
+  saveState();
+  hideOverlay();
+});
+const disarmOvNew = twoStep($("ov-new"), "もう一度押すと作り直します", () => { newCard(); hideOverlay(); });
+
+// ---- タブ ----
+function showTab(name) {
+  $("view-play").hidden = name !== "play";
+  $("view-words").hidden = name !== "words";
+  $("tab-play").setAttribute("aria-selected", String(name === "play"));
+  $("tab-words").setAttribute("aria-selected", String(name === "words"));
+  if (name === "words") { $("words").value = state.words; updateCount(); }
+}
+$("tab-play").addEventListener("click", () => showTab("play"));
+$("tab-words").addEventListener("click", () => showTab("words"));
+
+// ---- ことば ----
+function updateCount() {
+  const n = parseWords($("words").value).length;
+  const c = $("word-count");
+  c.textContent = n >= 24 ? n + " 個（OK）" : n + " 個（あと " + (24 - n) + " 個必要）";
+  c.classList.toggle("bad", n < 24);
+  $("btn-save-words").disabled = n < 24;
+}
+$("words").addEventListener("input", updateCount);
+twoStep($("btn-reset-words"), "もう一度押すと戻します", () => { $("words").value = DEFAULT_WORDS; updateCount(); },
+  () => $("words").value.trim() !== DEFAULT_WORDS);
+twoStep($("btn-save-words"), "印が消えます。もう一度押す", () => {
+  if (parseWords($("words").value).length < 24) return;
+  state.words = $("words").value;
+  newCard();
+  showTab("play");
+}, hasMarks);
+
+// ---- アプリとして開いているときはヒントを隠す ----
+const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+$("install-hint").hidden = standalone;
+
+// ---- 画面が消えないようにする（対応端末のみ）----
+let wakeLock = null;
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } } catch (e) {}
+}
+document.addEventListener("pointerdown", keepAwake, { passive: true });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+
+// ---- オフライン用 ----
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("./sw.js").catch(() => {}); });
+}
+
+render();
+</script>
+</body>
+</html>
