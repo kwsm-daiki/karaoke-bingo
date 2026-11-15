@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" media="print" onload="this.media='all'">
 <style>
-/* レイアウト: 1画面のゲーム。見出し → 状態 → 正方形のカード → 操作。ネオンのカラオケボックス */
+/* レイアウト: 1画面のゲーム。見出し → 状態（4枠）→ 残りの高さいっぱいの正方形カード → 操作。ネオンのカラオケボックス */
 :root {
   --bg: #130e26;
   --bg-glow: #3a1d6e;
@@ -48,51 +48,56 @@ body {
 }
 .app {
   max-width: 520px; margin: 0 auto; min-height: 100%;
-  padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex; flex-direction: column; gap: 10px;
 }
+body.playing .app { height: 100dvh; min-height: 0; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 h1 {
-  margin: 0; font: 800 1.6rem var(--display); letter-spacing: .04em; color: #fff; white-space: nowrap;
+  margin: 0; font: 800 1.55rem var(--display); letter-spacing: .04em; color: #fff; white-space: nowrap;
   text-shadow: 0 0 6px var(--pink), 0 0 18px var(--pink);
 }
 h1 span { color: var(--cyan); text-shadow: 0 0 6px var(--cyan), 0 0 18px var(--cyan); }
 .tabs { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
 .tabs button {
-  min-height: 44px; min-width: 64px; border: 0; background: transparent; color: var(--muted);
-  font: 700 .9rem var(--body); padding: 0 14px; border-radius: 999px; cursor: pointer;
+  min-height: 44px; min-width: 62px; border: 0; background: transparent; color: var(--muted);
+  font: 700 .9rem var(--body); padding: 0 12px; border-radius: 999px; cursor: pointer;
 }
 .tabs button[aria-selected="true"] { background: var(--line); color: #fff; }
 
-/* あそぶ画面は1画面に収める */
-#view-play { display: flex; flex-direction: column; gap: 12px; flex: 1; }
-.status { display: flex; gap: 8px; }
+/* あそぶ画面 */
+#view-play { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+.status { display: grid; grid-template-columns: 1fr 1fr 1fr 1.15fr; gap: 6px; }
 .pill {
-  flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-  padding: 6px 4px; text-align: center; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; color: var(--fg);
+  padding: 5px 2px; text-align: center; min-width: 0; font-family: var(--body);
 }
-.pill b { display: block; font: 800 1.55rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
-.pill small { color: var(--muted); font-size: .72rem; }
+.pill b { display: block; font: 800 1.45rem/1.15 var(--display); font-variant-numeric: tabular-nums; }
+.pill small { display: block; color: var(--muted); font-size: .7rem; white-space: nowrap; overflow: hidden; }
+@media (max-width: 360px) { .pill small { font-size: .62rem; letter-spacing: -.02em; } }
 .pill.reach.hot b { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 .pill.bingo.hot b { color: var(--pink); text-shadow: 0 0 10px var(--pink); }
+button.pill.rule { cursor: pointer; border-color: var(--cyan); box-shadow: inset 0 0 10px rgba(62, 230, 255, .18); }
+button.pill.rule b { font-size: 1.05rem; line-height: 1.55; color: var(--cyan); }
+button.pill.rule:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 
-.board-wrap { position: relative; width: min(100%, calc(100dvh - 290px)); min-width: min(100%, 300px); margin: 0 auto; }
-.board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; aspect-ratio: 1; width: 100%; }
+.board-area { flex: 1; min-height: 0; container-type: size; display: flex; align-items: flex-start; justify-content: center; }
+.board-wrap { position: relative; width: min(100cqw, 100cqh); aspect-ratio: 1; max-width: 100%; }
+.board { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 5px; width: 100%; height: 100%; }
 .cell {
   position: relative; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg);
-  border-radius: 10px; padding: 2px; cursor: pointer; user-select: none; -webkit-user-select: none;
+  border-radius: 10px; padding: 2px; cursor: pointer; user-select: none; -webkit-user-select: none; min-width: 0; min-height: 0;
   display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
-  font: 700 max(12px, min(4.1vw, 1.1rem))/1.15 var(--body);
+  font: 700 max(12px, min(4.1vw, 3.6cqmin, 1.1rem))/1.15 var(--body);
   transition: transform .08s, background .15s, border-color .15s;
 }
 .cell .w { position: relative; z-index: 1; overflow-wrap: anywhere; }
-.cell.long { font-size: max(12px, min(3.3vw, .92rem)); }
+.cell.long { font-size: max(12px, min(3.3vw, 3cqmin, .92rem)); }
 .cell:active { transform: scale(.92); }
 .cell:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
-/* 印: 文字の後ろに敷く丸 */
 .cell::before {
   content: ""; position: absolute; inset: 9%; border-radius: 50%;
   border: 2.5px solid var(--pink); background: rgba(255, 79, 163, .16);
@@ -101,38 +106,43 @@ h1 span { color: var(--cyan); text-shadow: 0 0 6px var(--cyan), 0 0 18px var(--c
 }
 .cell.on { border-color: var(--pink); background: var(--surface-on); box-shadow: 0 0 10px rgba(255, 79, 163, .5); }
 .cell.on::before { transform: scale(1) rotate(-8deg); opacity: 1; }
-/* そろった列: 水色の二重丸 */
 .cell.line { border-color: var(--cyan); box-shadow: 0 0 12px rgba(62, 230, 255, .65), inset 0 0 10px rgba(62, 230, 255, .3); }
 .cell.line::before { border-color: var(--cyan); background: rgba(62, 230, 255, .14); box-shadow: 0 0 0 3px var(--surface-on), 0 0 0 5.5px var(--cyan); inset: 14%; }
-/* あと1マス: 黄色の点線 */
 .cell.target { border: 2px dashed var(--yellow); }
 .cell.free { color: var(--cyan); font-family: var(--display); font-weight: 800; text-shadow: 0 0 8px var(--cyan); cursor: default; }
 .cell.free:active { transform: none; }
+/* 戻したマスを光らせる */
+.cell.undone { animation: undone .55s ease-out; }
+@keyframes undone { 0% { background: #fff; color: var(--on-accent); box-shadow: 0 0 22px #fff; } 100% { } }
 
-.reach-toast {
+.toast {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.6); z-index: 5;
   background: var(--yellow); color: var(--on-accent); font: 800 2rem var(--display);
   padding: 10px 26px; border-radius: 16px; opacity: 0; pointer-events: none; white-space: nowrap;
   box-shadow: 0 0 24px rgba(255, 216, 74, .7);
   transition: opacity .15s, transform .22s cubic-bezier(.3, 1.6, .6, 1);
 }
-.reach-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.toast.info { background: var(--cyan); font: 700 1.05rem var(--body); padding: 12px 20px; box-shadow: 0 0 24px rgba(62, 230, 255, .6); }
+.toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
+.actions { display: flex; gap: 8px; }
 .btn {
-  min-height: 48px; border-radius: 14px; padding: 10px 12px; cursor: pointer;
+  min-height: 48px; border-radius: 14px; padding: 8px 12px; cursor: pointer;
   font: 700 1rem var(--body); color: var(--fg); background: var(--surface); border: 1.5px solid var(--line);
 }
 .btn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 .btn.pink { background: var(--pink); border-color: var(--pink); color: var(--on-accent); box-shadow: 0 0 16px rgba(255, 79, 163, .55); }
 .btn.armed { background: var(--yellow); border-color: var(--yellow); color: var(--on-accent); }
-.btn:disabled { opacity: .45; }
-.hint { color: var(--muted); font-size: .8rem; line-height: 1.6; margin: 0; }
+.btn:disabled { opacity: .4; cursor: default; }
+#btn-undo { flex: 0 0 34%; }
+#btn-new { flex: 1; white-space: nowrap; }
+.hint { color: var(--muted); font-size: .78rem; line-height: 1.55; margin: 0; }
 .hint b { color: var(--fg); }
 
 /* ビンゴのオーバーレイ */
 .overlay {
   position: fixed; inset: 0; z-index: 20; background: rgba(10, 6, 24, .78);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 24px max(24px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
   animation: fade .2s;
 }
@@ -142,6 +152,32 @@ h1 span { color: var(--cyan); text-shadow: 0 0 6px var(--cyan), 0 0 18px var(--c
 .overlay .btn { width: 100%; }
 @keyframes fade { from { opacity: 0; } }
 @keyframes pop { from { transform: scale(.5); opacity: 0; } }
+
+/* ルールのシート */
+.sheet-back { position: fixed; inset: 0; z-index: 30; background: rgba(10, 6, 24, .7); display: flex; align-items: flex-end; justify-content: center; animation: fade .15s; }
+.sheet {
+  width: 100%; max-width: 520px; max-height: 92dvh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0;
+  padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 12px; animation: up .22s ease-out;
+}
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+.sheet h2 { margin: 0; font: 800 1.2rem var(--display); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 4px; }
+.seg button { min-height: 48px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font: 700 1rem var(--body); cursor: pointer; }
+.seg button[aria-checked="true"] { background: var(--cyan); color: var(--on-accent); }
+.seg button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+.rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rules li { display: grid; grid-template-columns: 2.2em 1fr; gap: 8px; align-items: start; padding: 9px 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.rules li.diff { border-color: var(--yellow); box-shadow: inset 0 0 0 1px var(--yellow); }
+.rules .mk { font: 800 1.25rem/1.2 var(--display); text-align: center; }
+.rules .mk.ok { color: var(--cyan); }
+.rules .mk.ng { color: var(--pink); }
+.rules .t { font-size: .92rem; line-height: 1.5; }
+.rules .t b { display: block; font-size: .78rem; color: var(--muted); font-weight: 700; }
+.rules .t em { font-style: normal; color: var(--yellow); font-size: .75rem; font-weight: 700; margin-left: 6px; }
+.sheet h3 { margin: 4px 0 0; font-size: .85rem; color: var(--muted); }
+.common { margin: 0; padding-left: 1.2em; font-size: .9rem; line-height: 1.7; }
 
 /* ことば画面 */
 #view-words { display: flex; flex-direction: column; gap: 10px; }
@@ -160,7 +196,7 @@ textarea:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
 }
 </style>
 </head>
-<body>
+<body class="playing">
 <div class="app">
   <header>
     <h1>歌詞<span>ビンゴ</span></h1>
@@ -175,14 +211,19 @@ textarea:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
       <div class="pill bingo" id="pill-bingo"><b id="n-bingo">0</b><small>ビンゴ</small></div>
       <div class="pill reach" id="pill-reach"><b id="n-reach">0</b><small>リーチ</small></div>
       <div class="pill"><b id="n-marked">1</b><small>/25 FREE込み</small></div>
+      <button class="pill rule" id="btn-rule" aria-haspopup="dialog"><b id="rule-name">ふつう</b><small>ルール ▸</small></button>
     </div>
-    <div class="board-wrap">
-      <div class="board" id="board" aria-label="ビンゴカード"></div>
-      <div class="reach-toast" id="reach-toast" aria-hidden="true">リーチ!</div>
+    <div class="board-area">
+      <div class="board-wrap">
+        <div class="board" id="board" aria-label="ビンゴカード"></div>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </div>
     </div>
-    <button class="btn" id="btn-new">新しいカード</button>
+    <div class="actions">
+      <button class="btn" id="btn-undo" disabled>↶ 戻す</button>
+      <button class="btn" id="btn-new">新しいカード</button>
+    </div>
     <p class="hint">歌詞にマスの言葉が出たらタップ。もう一度タップで取り消し。</p>
-    <p class="hint" id="install-hint"><b>アプリにする:</b> Android は右上の「︙」→「ホーム画面に追加」、iPhone は共有ボタン →「ホーム画面に追加」</p>
   </section>
 
   <section id="view-words" role="tabpanel" hidden>
@@ -205,11 +246,32 @@ textarea:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
   </div>
 </div>
 
+<div class="sheet-back" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h2 id="sheet-title">言葉の数え方</h2>
+    <div class="seg" role="radiogroup" aria-label="ルール">
+      <button role="radio" data-rule="loose" aria-checked="false">ゆるめ</button>
+      <button role="radio" data-rule="normal" aria-checked="true">ふつう</button>
+      <button role="radio" data-rule="strict" aria-checked="false">きびしめ</button>
+    </div>
+    <ul class="rules" id="rule-list"></ul>
+    <h3>どのルールでも同じ</h3>
+    <ul class="common">
+      <li>意味が同じ別の言葉はダメ（君 ≠ あなた）</li>
+      <li>数えるのは画面に出た歌詞だけ。自分が歌った曲は数えない</li>
+      <li>迷ったら、歌っている人が決める</li>
+    </ul>
+    <button class="btn" id="sheet-close">閉じる</button>
+  </div>
+</div>
+
 <script>
 "use strict";
-const DEFAULT_WORDS = ["君","僕","愛","夢","空","涙","笑顔","未来","明日","星","光","風","心","世界","約束","奇跡","永遠","季節","桜","夜","月","雨","海","花","声","名前","記憶","思い出","さよなら","ありがとう","好き","一緒","運命","自由","希望","勇気","翼","扉","道","旅","景色","瞳","胸","痛み","嘘","青春","恋","秘密","幸せ","最後","今日","昨日","夏","冬","太陽","虹","神様","魔法","宇宙","鼓動","信じる","守る","輝く","叶う","届く","走る","抱きしめる","泣く","忘れない","ふたり","友","俺","Baby","Oh","Yeah","ラララ"].join("\n");
+const OLD_DEFAULT_WORDS_V1 = ["君","僕","愛","夢","空","涙","笑顔","未来","明日","星","光","風","心","世界","約束","奇跡","永遠","季節","桜","夜","月","雨","海","花","声","名前","記憶","思い出","さよなら","ありがとう","好き","一緒","運命","自由","希望","勇気","翼","扉","道","旅","景色","瞳","胸","痛み","嘘","青春","恋","秘密","幸せ","最後","今日","昨日","夏","冬","太陽","虹","神様","魔法","宇宙","鼓動","信じる","守る","輝く","叶う","届く","走る","抱きしめる","泣く","忘れない","ふたり","友","俺","Baby","Oh","Yeah","ラララ"];
+const DEFAULT_WORDS = ["君","僕","愛","夢","空","涙","笑顔","未来","明日","星","光","風","心","世界","約束","奇跡","永遠","季節","桜","夜","月","雨","海","花","声","名前","記憶","思い出","さよなら","ありがとう","好き","一緒","運命","自由","希望","勇気","翼","扉","道","旅","景色","瞳","胸","痛み","嘘","青春","恋","秘密","幸せ","最後","今日","昨日","夏","冬","太陽","虹","神様","魔法","宇宙","鼓動","手","雲","街","朝","春","秋","物語","花火","地図","ふたり","友","俺","Baby","Oh","Yeah","ラララ"].join("\n");
 const KEY = "lyric-bingo-v2";
 const FREE = 12;
+const HISTORY_MAX = 100;
 const LINES = (() => {
   const L = [];
   for (let r = 0; r < 5; r++) L.push([0, 1, 2, 3, 4].map(c => r * 5 + c));
@@ -217,12 +279,18 @@ const LINES = (() => {
   L.push([0, 6, 12, 18, 24], [4, 8, 12, 16, 20]);
   return L;
 })();
+const RULES = {
+  loose:  { name: "ゆるめ",   rows: [["書き方", "ok", "君 ＝ きみ ＝ キミ（読みが同じならOK）"], ["形の変化", "ok", "輝く → 輝いて もOK"], ["長い言葉の一部", "ok", "夜 → 夜空 もOK（入っていればOK）"]] },
+  normal: { name: "ふつう",   rows: [["書き方", "ok", "君 ＝ きみ ＝ キミ（読みが同じならOK）"], ["形の変化", "ng", "輝く ≠ 輝いて（形が変わったらダメ）"], ["長い言葉の一部", "ok", "星 → 流れ星 はOK。夜 → 夜空 はダメ（読みが変わる）"]] },
+  strict: { name: "きびしめ", rows: [["書き方", "ng", "君 ≠ きみ（画面の歌詞と同じ書き方だけOK）"], ["形の変化", "ng", "輝く ≠ 輝いて（形が変わったらダメ）"], ["長い言葉の一部", "ok", "星 → 流れ星 はOK。夜 → 夜空 はダメ（読みが変わる）"]] }
+};
 
 // ---- 状態 ----
 function parseWords(text) {
   const seen = new Set();
   return String(text).split(/\r?\n/).map(s => s.trim()).filter(s => s && !seen.has(s) && seen.add(s));
 }
+function sameList(a, b) { return a.length === b.length && a.every((w, i) => w === b[i]); }
 function shuffle(a) {
   a = a.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -231,23 +299,30 @@ function shuffle(a) {
 function makeCard(words) {
   const pick = shuffle(parseWords(words)).slice(0, 24);
   pick.splice(FREE, 0, "FREE");
-  return { card: pick, marks: pick.map((_, i) => i === FREE), ackBingo: 0 };
+  return { card: pick, marks: pick.map((_, i) => i === FREE) };
 }
-function isValid(s) {
-  return s && typeof s.words === "string" && parseWords(s.words).length >= 24 &&
-    Array.isArray(s.card) && s.card.length === 25 && s.card.every(w => typeof w === "string") &&
-    Array.isArray(s.marks) && s.marks.length === 25 && s.marks[FREE] === true &&
-    Number.isInteger(s.ackBingo) && s.ackBingo >= 0;
+function validCard(c) {
+  return c && Array.isArray(c.card) && c.card.length === 25 && c.card.every(w => typeof w === "string") &&
+    Array.isArray(c.marks) && c.marks.length === 25 && c.marks.every(m => typeof m === "boolean") && c.marks[FREE] === true;
 }
 function loadState() {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
-  if (isValid(s)) return s;
-  const words = s && typeof s.words === "string" && parseWords(s.words).length >= 24 ? s.words : DEFAULT_WORDS;
-  return Object.assign({ words }, makeCard(words));
+  if (!s || typeof s !== "object") s = {};
+  let words = typeof s.words === "string" && parseWords(s.words).length >= 24 ? s.words : DEFAULT_WORDS;
+  if (sameList(parseWords(words), OLD_DEFAULT_WORDS_V1)) words = DEFAULT_WORDS; // 第1版の標準のままなら新しい標準へ
+  const base = validCard(s) ? { card: s.card, marks: s.marks } : makeCard(words);
+  const history = Array.isArray(s.history) ? s.history.filter(validCard).map(h => ({ card: h.card, marks: h.marks })).slice(-HISTORY_MAX) : [];
+  const rule = RULES[s.rule] ? s.rule : "normal";
+  return { words, card: base.card, marks: base.marks, ackBingo: 0, history, rule };
 }
-function saveState() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-
+function saveState() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) {
+    // 容量が足りないときは、古い履歴を減らしてもう一度
+    try { state.history = state.history.slice(-20); localStorage.setItem(KEY, JSON.stringify(state)); } catch (e2) {}
+  }
+}
 function evaluate(marks) {
   const done = LINES.filter(l => l.every(i => marks[i]));
   const reachLines = LINES.filter(l => l.filter(i => marks[i]).length === 4);
@@ -256,8 +331,7 @@ function evaluate(marks) {
 }
 
 let state = loadState();
-// 閉じる前にオーバーレイが出ていた等で ackBingo がずれていたら、そろえる
-state.ackBingo = evaluate(state.marks).bingo;
+state.ackBingo = evaluate(state.marks).bingo; // 開き直したときにオーバーレイを出し直さない
 saveState();
 
 // ---- 表示 ----
@@ -295,29 +369,61 @@ function render() {
   $("n-marked").textContent = state.marks.filter(Boolean).length;
   $("pill-bingo").classList.toggle("hot", ev.bingo > 0);
   $("pill-reach").classList.toggle("hot", ev.reach > 0);
+  $("rule-name").textContent = RULES[state.rule].name;
+  $("btn-rule").setAttribute("aria-label", "ルール: " + RULES[state.rule].name + "。押すと説明と切り替え");
+  $("btn-undo").disabled = state.history.length === 0;
   return ev;
 }
 
 function buzz(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 
-let reachTimer;
-function showReach() {
-  const t = $("reach-toast");
-  t.classList.add("show");
-  clearTimeout(reachTimer);
-  reachTimer = setTimeout(() => t.classList.remove("show"), 1000);
+let toastTimer;
+function showToast(text, kind) {
+  const t = $("toast");
+  t.textContent = text;
+  t.className = "toast show" + (kind === "info" ? " info" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), kind === "info" ? 1400 : 1000);
 }
 
+// ---- 履歴（戻す）----
+function pushHistory() {
+  state.history.push({ card: state.card.slice(), marks: state.marks.slice() });
+  if (state.history.length > HISTORY_MAX) state.history.splice(0, state.history.length - HISTORY_MAX);
+}
+let lastUndo = 0;
+function undo() {
+  const now = Date.now();
+  if (now - lastUndo < 300 || !state.history.length || !$("overlay").hidden || !$("sheet").hidden) return;
+  lastUndo = now;
+  disarmNew();
+  const prev = state.history.pop();
+  const cardChanged = prev.card.join("\n") !== state.card.join("\n");
+  const changed = cardChanged ? [] : prev.marks.map((m, i) => m !== state.marks[i] ? i : -1).filter(i => i >= 0);
+  state.card = prev.card;
+  state.marks = prev.marks;
+  state.ackBingo = evaluate(state.marks).bingo; // 戻した結果ではオーバーレイを出さない
+  render();
+  saveState();
+  if (cardChanged) showToast("前のカードに戻しました", "info");
+  changed.forEach(i => { const c = cells[i]; c.classList.remove("undone"); void c.offsetWidth; c.classList.add("undone"); });
+  buzz(25);
+}
+$("btn-undo").addEventListener("click", undo);
+
+// ---- タップ ----
 function toggle(i) {
   if (i === FREE || !$("overlay").hidden) return;
+  disarmNew();
   const before = evaluate(state.marks);
+  pushHistory();
   state.marks[i] = !state.marks[i];
   const after = render();
   if (!state.marks[i]) state.ackBingo = Math.min(state.ackBingo, after.bingo);
   if (after.bingo > state.ackBingo) {
     showOverlay(after.bingo);
   } else if (state.marks[i] && after.reach > before.reach && after.bingo === before.bingo) {
-    showReach();
+    showToast("リーチ!");
     buzz(60);
   } else {
     buzz(state.marks[i] ? 15 : [30, 40, 30]);
@@ -340,12 +446,14 @@ function twoStep(btn, armedLabel, action, needConfirm = () => true) {
 }
 
 function newCard() {
+  pushHistory();
   Object.assign(state, makeCard(state.words));
+  state.ackBingo = 0;
   saveState();
   render();
 }
 const hasMarks = () => state.marks.some((m, i) => m && i !== FREE);
-twoStep($("btn-new"), "もう一度押すと作り直します", newCard, hasMarks);
+const disarmNew = twoStep($("btn-new"), "もう一度で作り直し", newCard, hasMarks);
 
 // ---- オーバーレイ ----
 let unlockTimer;
@@ -365,15 +473,67 @@ $("ov-continue").addEventListener("click", () => {
   saveState();
   hideOverlay();
 });
-const disarmOvNew = twoStep($("ov-new"), "もう一度押すと作り直します", () => { newCard(); hideOverlay(); });
+const disarmOvNew = twoStep($("ov-new"), "もう一度で作り直し", () => { newCard(); hideOverlay(); });
+
+// ---- ルールのシート ----
+function renderRules() {
+  const r = RULES[state.rule];
+  const list = $("rule-list");
+  list.innerHTML = "";
+  r.rows.forEach(([title, mk, text], i) => {
+    const n = RULES.normal.rows[i];
+    const li = document.createElement("li");
+    const diff = state.rule !== "normal" && (n[1] !== mk || n[2] !== text);
+    if (diff) li.className = "diff";
+    const m = document.createElement("span");
+    m.className = "mk " + mk;
+    m.textContent = mk === "ok" ? "○" : "×";
+    m.setAttribute("aria-label", mk === "ok" ? "OK" : "ダメ");
+    const t = document.createElement("span");
+    t.className = "t";
+    const b = document.createElement("b");
+    b.textContent = title;
+    if (diff) { const em = document.createElement("em"); em.textContent = "ふつうと違う"; b.appendChild(em); }
+    t.appendChild(b);
+    t.appendChild(document.createTextNode(text));
+    li.append(m, t);
+    list.appendChild(li);
+  });
+  document.querySelectorAll(".seg button").forEach(btn => btn.setAttribute("aria-checked", String(btn.dataset.rule === state.rule)));
+}
+function openSheet() {
+  disarmNew();
+  renderRules();
+  $("sheet").hidden = false;
+  try { history.pushState({ sheet: true }, ""); } catch (e) {}
+  document.querySelector('.seg button[aria-checked="true"]').focus();
+}
+function closeSheet(fromPop) {
+  if ($("sheet").hidden) return;
+  $("sheet").hidden = true;
+  if (!fromPop && history.state && history.state.sheet) history.back();
+  $("btn-rule").focus();
+}
+$("btn-rule").addEventListener("click", openSheet);
+$("sheet-close").addEventListener("click", () => closeSheet(false));
+$("sheet").addEventListener("click", e => { if (e.target === $("sheet")) closeSheet(false); });
+window.addEventListener("popstate", () => closeSheet(true));
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(false); });
+document.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
+  state.rule = btn.dataset.rule;
+  saveState();
+  renderRules();
+  render();
+}));
 
 // ---- タブ ----
 function showTab(name) {
   $("view-play").hidden = name !== "play";
   $("view-words").hidden = name !== "words";
+  document.body.classList.toggle("playing", name === "play");
   $("tab-play").setAttribute("aria-selected", String(name === "play"));
   $("tab-words").setAttribute("aria-selected", String(name === "words"));
-  if (name === "words") { $("words").value = state.words; updateCount(); }
+  if (name === "words") { disarmNew(); $("words").value = state.words; updateCount(); }
 }
 $("tab-play").addEventListener("click", () => showTab("play"));
 $("tab-words").addEventListener("click", () => showTab("words"));
@@ -388,17 +548,13 @@ function updateCount() {
 }
 $("words").addEventListener("input", updateCount);
 twoStep($("btn-reset-words"), "もう一度押すと戻します", () => { $("words").value = DEFAULT_WORDS; updateCount(); },
-  () => $("words").value.trim() !== DEFAULT_WORDS);
+  () => !sameList(parseWords($("words").value), parseWords(DEFAULT_WORDS)));
 twoStep($("btn-save-words"), "印が消えます。もう一度押す", () => {
   if (parseWords($("words").value).length < 24) return;
   state.words = $("words").value;
   newCard();
   showTab("play");
 }, hasMarks);
-
-// ---- アプリとして開いているときはヒントを隠す ----
-const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
-$("install-hint").hidden = standalone;
 
 // ---- 画面が消えないようにする（対応端末のみ）----
 let wakeLock = null;

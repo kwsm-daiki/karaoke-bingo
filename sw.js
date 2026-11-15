@@ -1,6 +1,6 @@
 // 歌詞ビンゴ の Service Worker（オフラインで動かすため）
 // 中身を変えたら、VERSION の数字を上げる
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "lyric-bingo-" + VERSION;
 const FONT_CACHE = "lyric-bingo-fonts";
 const FILES = [
@@ -35,19 +35,23 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // ページを開く: まずネット（新しい版）、だめならキャッシュ
+  // ページを開く: まずネット（新しい版）。3秒で返事がない・失敗したら、保存してある版
   if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put("./index.html", copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match("./index.html", { ignoreSearch: true }))
-    );
+    event.respondWith(new Promise((resolve) => {
+      let done = false;
+      const fromCache = () => caches.match("./index.html", { ignoreSearch: true });
+      const finish = (res) => { if (!done && res) { done = true; resolve(res); } };
+      const net = fetch(req).then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put("./index.html", copy));
+        }
+        return res;
+      });
+      const timer = setTimeout(() => { fromCache().then(finish); }, 3000);
+      net.then((res) => { clearTimeout(timer); finish(res); })
+        .catch(() => { clearTimeout(timer); fromCache().then((c) => finish(c || Response.error())); });
+    }));
     return;
   }
 
