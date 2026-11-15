@@ -1,6 +1,6 @@
 // 歌詞ビンゴ の Service Worker（オフラインで動かすため）
 // 中身を変えたら、VERSION の数字を上げる
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "lyric-bingo-" + VERSION;
 const FONT_CACHE = "lyric-bingo-fonts";
 const FILES = [
