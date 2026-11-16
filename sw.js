@@ -1,6 +1,7 @@
 // 歌詞ビンゴ の Service Worker（オフラインで動かすため）
 // 中身を変えたら、VERSION の数字を上げる
-const VERSION = "v3";
+// 同じオリジン（github.io）に Nudge もあるので、消すのは "lyric-bingo-" で始まるキャッシュだけ
+const VERSION = "v4";
 const CACHE = "lyric-bingo-" + VERSION;
 const FONT_CACHE = "lyric-bingo-fonts";
 const FILES = [
@@ -25,7 +26,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== FONT_CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("lyric-bingo-") && k !== CACHE && k !== FONT_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
